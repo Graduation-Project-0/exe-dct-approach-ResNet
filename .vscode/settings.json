@@ -1,0 +1,6 @@
+{
+  "python.defaultInterpreterPath": "/home/mohamed-reda/miniconda3/envs/mini-rag-app/bin/python",
+  "python.analysis.extraPaths": [
+    "/home/mohamed-reda/miniconda3/envs/mini-rag-app/lib/python3.12/site-packages"
+  ]
+}
