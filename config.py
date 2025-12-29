@@ -12,13 +12,6 @@ DATA_CONFIG = {
 MODEL_CONFIG = {
     'image_size': 256,
     
-    # 3C2D config
-    'conv_channels': [32, 64, 128],
-    'kernel_size': 3,
-    'pool_size': 2,
-    'fc_layers': [512, 256],
-    'dropout_rate': 0.5,
-    
     # ResNet config
     'resnet_variant': 'resnet50',
     'pretrained': True,
@@ -67,7 +60,7 @@ LOG_CONFIG = {
 
 def get_config(model_type: str = 'resnet'):
     config = {
-        'model_type': model_type,
+        'model_type': 'resnet',
         'data': DATA_CONFIG.copy(),
         'model': MODEL_CONFIG.copy(),
         'training': TRAINING_CONFIG.copy(),
@@ -77,14 +70,9 @@ def get_config(model_type: str = 'resnet'):
         'log': LOG_CONFIG.copy(),
     }
     
-    if model_type == '3c2d':
-        config['data']['mode'] = 'two_channel'  # 2-way XOR
-        config['model']['input_channels'] = 1
-    elif model_type == 'resnet':
-        config['data']['mode'] = 'three_way_xor'
-        config['model']['input_channels'] = 3
-    else:
-        raise ValueError(f"Unknown model_type: {model_type}")
+    # ResNet setup
+    config['data']['mode'] = 'three_way_xor'
+    config['model']['input_channels'] = 3
     
     return config
 

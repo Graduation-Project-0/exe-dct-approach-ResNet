@@ -7,7 +7,6 @@ torch.set_float32_matmul_precision('high')
 
 from config import get_config
 from utils.data_loader import create_data_loaders
-from models.cnn_models import C3C2D_TwoChannel
 from models.resnet_models import ResNetMalwareDetector, count_parameters
 from utils.training import (
     train_model, 
@@ -31,19 +30,12 @@ def get_device(device_arg: str) -> torch.device:
 
 
 def create_model(config):
-    model_type = config['model_type']
-    
-    if model_type == '3c2d':
-        model = C3C2D_TwoChannel()
-    elif model_type == 'resnet':
-        model = ResNetMalwareDetector(
-            model_name=config['model']['resnet_variant'],
-            num_classes=2,  
-            pretrained=config['model']['pretrained'],
-            freeze_backbone=config['model']['freeze_backbone']
-        )
-    else:
-        raise ValueError(f"Unknown model type: {model_type}")
+    model = ResNetMalwareDetector(
+        model_name=config['model']['resnet_variant'],
+        num_classes=2,  
+        pretrained=config['model']['pretrained'],
+        freeze_backbone=config['model']['freeze_backbone']
+    )
     
     return model
 
@@ -101,7 +93,9 @@ def run_pipeline(config):
             learning_rate=config['training']['learning_rate'],
             device=device,
             save_path=model_save_path,
-            patience=config['training']['patience']
+            patience=config['training']['patience'],
+            gradient_accumulation_steps=config['training'].get('gradient_accumulation_steps', 1),
+            use_amp=config['training'].get('use_amp', False)
         )
         
         if config['eval']['plot_training_history']:
@@ -133,9 +127,8 @@ def main():
     
     print("\nConfiguration:")
     print(f"\tModel type:     {config['model_type']}")
-    if config['model_type'] == 'resnet':
-        print(f"\tResNet variant: {config['model']['resnet_variant']}")
-        print(f"\tPretrained:     {config['model']['pretrained']}")
+    print(f"\tResNet variant: {config['model']['resnet_variant']}")
+    print(f"\tPretrained:     {config['model']['pretrained']}")
     print(f"\tData mode:      {config['data']['mode']}")
     print(f"\tData directory: {config['data']['data_dir']}")
     print(f"\tBatch size:     {config['training']['batch_size']}")

@@ -79,22 +79,6 @@ def resize_image(image: np.ndarray, target_size: Tuple[int, int]) -> np.ndarray:
     return resized
 
 
-def create_two_channel_image(file_path: str) -> np.ndarray:
-    byte_data = read_binary_file(file_path)
-    byteplot = create_byteplot_from_bytes(byte_data, target_size=(256, 256))
-    byteplot_uint8 = (byteplot * 255).astype(np.uint8)
-    
-    bigram_freq = extract_bigrams(byte_data)
-    bigram_img = create_bigram_image(bigram_freq, zero_out_0000=True)
-    dct_image = apply_2d_dct(bigram_img)
-    dct_uint8 = (dct_image * 255).astype(np.uint8)
-    
-    xor_image = np.bitwise_xor(byteplot_uint8, dct_uint8)
-    
-    xor_norm = xor_image.astype(np.float32) / 255.0
-    
-    return xor_norm
-
 def create_three_channel_image(file_path: str) -> np.ndarray:
     """
     Create 3-channel image for ResNet as per paper.
@@ -117,13 +101,15 @@ def create_three_channel_image(file_path: str) -> np.ndarray:
     return three_channel.astype(np.float32)
 
 if __name__ == "__main__":
-    exe_path = None
-    print("\nGenerating byteplot image...")
-    byteplot = create_byteplot_image(exe_path)
-    print(f"Byteplot image shape: {byteplot.shape}")
+    import os
+    # Find a sample file for testing if possible, otherwise use a dummy path
+    exe_path = "data/benign/ab.exe" 
     
-    print("\nGenerating 2-channel ensemble image...")
-    two_channel = create_two_channel_image(exe_path)
-    print(f"Two-channel image shape: {two_channel.shape}")
+    if os.path.exists(exe_path):
+        print("\nGenerating 3-channel ResNet image...")
+        three_channel = create_three_channel_image(exe_path)
+        print(f"Three-channel image shape: {three_channel.shape}")
+    else:
+        print(f"\nTest file not found: {exe_path}. Skipping image generation test.")
 
 

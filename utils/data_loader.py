@@ -9,24 +9,23 @@ import random
 # Handle both direct execution and module import
 if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from utils.image_generation import create_two_channel_image
+    from utils.image_generation import create_three_channel_image
 else:
-    from utils.image_generation import create_two_channel_image
+    from utils.image_generation import create_three_channel_image
 
 
 class MalwareImageDataset(Dataset):
     def __init__(
         self, 
         data_dir: str, 
-        mode: str = 'two_channel',  # 'bigram_dct' or 'two_channel'
+        mode: str = 'three_way_xor',
         max_samples: Optional[int] = None
     ):
         self.data_dir = data_dir
         self.mode = mode
         self.samples = []  # List of (file_path, label)
         
-        
-        self.create_two_channel_image = create_two_channel_image
+        self.create_three_channel_image = create_three_channel_image
         
         self._load_samples(max_samples)
     
@@ -65,33 +64,23 @@ class MalwareImageDataset(Dataset):
         file_path, label = self.samples[idx]
         
         try:
-            if self.mode == 'two_channel':
-                # 2-way XOR: byteplot XOR bigram-DCT
-                image = self.create_two_channel_image(file_path)
-                image = np.expand_dims(image, axis=0)  # (1, H, W)
-            
-            elif self.mode == 'three_way_xor':
-                # ResNet: 3 separate channels (sparse, DCT, byteplot)
-                from utils.image_generation import create_three_channel_image
-                image = create_three_channel_image(file_path)  # (3, H, W)
-            
-            else:
-                raise ValueError(f"Unknown mode: {self.mode}")
+            # ResNet: 3 separate channels (sparse, DCT, byteplot)
+            image = self.create_three_channel_image(file_path)  # (3, H, W)
             
             image_tensor = torch.from_numpy(image).float()
             return image_tensor, label
         
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
-            # Return appropriate zero tensor based on mode
-            channels = 3 if self.mode == 'three_way_xor' else 1
+            # Return appropriate zero tensor
+            channels = 3
             image_tensor = torch.zeros((channels, 256, 256), dtype=torch.float32)
             return image_tensor, label
 
 
 def create_data_loaders(
     data_dir: str,
-    mode: str = 'two_channel',
+    mode: str = 'three_way_xor',
     batch_size: int = 32,
     train_split: float = 0.7,
     val_split: float = 0.2,
@@ -155,10 +144,10 @@ def create_data_loaders(
 if __name__ == "__main__":
     data_dir = "./data"
     
-    print("\nTesting Pipeline 2 (Two-Channel)...")
+    print("\nTesting ResNet Pipeline (Three-Way)...")
     train_loader, val_loader, test_loader = create_data_loaders(
         data_dir,
-        mode='two_channel',
+        mode='three_way_xor',
         batch_size=8,
         max_samples=100
     )

@@ -1,45 +1,34 @@
-# Malware Detection Using DCT-Based Image Visualization
+# Malware Detection Using ResNet and DCT bigram Visualization
 
-A deep learning approach for malware detection using frequency domain image visualization with support for both shallow CNN and ResNet architectures. **Optimized for NVIDIA H100 80GB HBM3 GPU.**
+A deep architecture for malware detection using frequency domain image visualization and ResNet models (18 and 50). **Optimized architecture for H100 GPU.**
 
-## Models
+## Approach
 
-| Model     | Input Method | Input Shape   | Parameters | Accuracy |
-| --------- | ------------ | ------------- | ---------- | -------- |
-| 3C2D      | 2-way XOR    | (1, 256, 256) | ~17M       | ~98%     |
-| ResNet-18 | 3-channel    | (3, 256, 256) | ~11M       | ~88%     |
-| ResNet-50 | 3-channel    | (3, 256, 256) | ~23M       | ~89%     |
+This project implements a 3-channel image visualization technique for executable files:
 
-**XOR Methods**:
+- **Channel 0**: Sparse bigram frequency image
+- **Channel 1**: DCT-transformed bigram image
+- **Channel 2**: Byteplot image (raw byte visualization)
 
-- **2-way XOR**: byteplot ⊕ bigram-DCT → single channel
-- **3-channel**: [sparse bigram, DCT bigram, byteplot] → 3 separate channels
+These three channels are stacked into a single tensor for classification using ResNet architectures.
 
 ## H100 GPU Optimizations
 
 This codebase is optimized for NVIDIA H100 80GB HBM3:
 
 - ✅ **TF32 Precision**: Enabled for faster matrix multiplications
-- ✅ **BFloat16 Mixed Precision**: Automatic mixed precision training
+- ✅ **BFloat16 Mixed Precision**: Automatic mixed precision training and inference
 - ✅ **torch.compile()**: JIT compilation for model optimization
-- ✅ **Large Batch Sizes**: Default 1024 (up from 128) to utilize 85GB memory
+- ✅ **Large Batch Sizes**: Default 1024 to utilize 80GB+ memory
 - ✅ **Optimized Data Loading**: 16 workers, prefetching, persistent workers
 - ✅ **cuDNN Benchmark**: Automatic convolution algorithm selection
 - ✅ **Non-blocking Transfers**: Asynchronous CPU-GPU data transfers
-- ✅ **Gradient Scaler**: Proper mixed precision training with loss scaling
 
 ### Check GPU Status
 
 ```bash
 python utils/gpu_info.py
 ```
-
-This will display:
-
-- GPU device information and memory
-- Current optimization settings
-- Performance benchmarks
-- Recommendations for H100
 
 ## Setup
 
@@ -59,15 +48,7 @@ data/
 
 ### Training
 
-Edit `main.py` to select model:
-
-```python
-# Choose model: '3c2d' or 'resnet'
-MODEL_TYPE = 'resnet'  # or '3c2d'
-
-# Optional: Override ResNet variant
-# config['model']['resnet_variant'] = 'resnet50'  # or 'resnet18'
-```
+The training process is configured in `config.py`. By default, it uses ResNet-50.
 
 Run training:
 
@@ -77,55 +58,36 @@ python main.py
 
 ### Prediction
 
-Predict a single file:
+Use the dedicated ResNet prediction script to analyze a single file. Edit the `INPUT_FILE_PATH` and `CHECKPOINT_PATH` variables at the top of the script:
 
-```bash
-# Auto-detect model type from checkpoint
-python simple_predict.py --file path/to/executable.exe --checkpoint checkpoints/resnet_best.pth
-
-# Specify model type explicitly
-python simple_predict.py --file data/benign/ab.exe --checkpoint checkpoints/3c2d_best.pth --model-type 3c2d
+```python
+# resnet_predict.py
+INPUT_FILE_PATH = 'data/benign/ab.exe'
+CHECKPOINT_PATH = 'checkpoints/resnet_best.pth'
 ```
 
-### Configuration Options
+Then run:
 
-| Parameter                     | Default    | Description                           |
-| ----------------------------- | ---------- | ------------------------------------- |
-| `MODEL_TYPE`                  | `resnet`   | Model architecture                    |
-| `resnet_variant`              | `resnet50` | ResNet-18 or ResNet-50                |
-| `pretrained`                  | `True`     | Use ImageNet weights                  |
-| `freeze_backbone`             | `False`    | Freeze backbone layers                |
-| `DATA_DIR`                    | `./data`   | Dataset directory                     |
-| `EPOCHS`                      | `25`       | Training epochs                       |
-| `BATCH_SIZE`                  | `1024`     | Batch size (H100 optimized)           |
-| `LEARNING_RATE`               | `0.001`    | Learning rate                         |
-| `DEVICE`                      | `auto`     | auto, cpu, cuda                       |
-| `num_workers`                 | `16`       | Data loading workers (H100)           |
-| `prefetch_factor`             | `4`        | Batches to prefetch per worker        |
-| `persistent_workers`          | `True`     | Keep workers alive between epochs     |
-| `gradient_accumulation_steps` | `1`        | For even larger effective batch sizes |
+```bash
+python resnet_predict.py
+```
+
+## Configuration Options
+
+| Parameter         | Default    | Description                 |
+| ----------------- | ---------- | --------------------------- |
+| `resnet_variant`  | `resnet50` | ResNet-18 or ResNet-50      |
+| `pretrained`      | `True`     | Use ImageNet weights        |
+| `freeze_backbone` | `False`    | Freeze backbone layers      |
+| `DATA_DIR`        | `./data`   | Dataset directory           |
+| `EPOCHS`          | `25`       | Training epochs             |
+| `BATCH_SIZE`      | `1024`     | Batch size (H100 optimized) |
+| `LEARNING_RATE`   | `0.001`    | Learning rate               |
+| `num_workers`     | `16`       | Data loading workers (H100) |
 
 ## Output
 
-- `checkpoints/{model_type}_best.pth` - Trained model
-- `results/{model_type}_training_history.png` - Training curves
-- `results/{model_type}_roc_curve.png` - ROC curve
-- `results/{model_type}_confusion_matrix.png` - Confusion matrix
-
-## Requirements
-
-- Python 3.7+
-- PyTorch >= 2.0.0 (for torch.compile and BFloat16)
-- torchvision
-- NumPy, SciPy, scikit-learn, matplotlib, tqdm
-- NVIDIA GPU with CUDA support (H100 recommended)
-
-## Performance Tips
-
-For maximum H100 performance:
-
-1. **Increase batch size** based on your dataset size and memory
-2. **Adjust num_workers** (try 16-32 for H100)
-3. **Use gradient accumulation** for effective batch sizes > 1024
-4. **Monitor GPU utilization** with `nvidia-smi -l 1`
-5. **Profile your code** to identify bottlenecks
+- `checkpoints/resnet_best.pth` - Trained model
+- `results/resnet_training_history.png` - Training curves
+- `results/resnet_roc_curve.png` - ROC curve
+- `results/resnet_confusion_matrix.png` - Confusion matrix
