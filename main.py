@@ -31,7 +31,6 @@ def get_device(device_arg: str) -> torch.device:
 
 
 def create_model(config):
-    """Factory function to create model based on config."""
     model_type = config['model_type']
     
     if model_type == '3c2d':
@@ -74,7 +73,6 @@ def run_pipeline(config):
     print("\nInitializing model...")
     model = create_model(config)
     
-    # H100 Optimization: Compile model
     print("Compiling model for H100...")
     model = torch.compile(model)
     

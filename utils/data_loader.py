@@ -1,10 +1,17 @@
 import os
+import sys
 import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from typing import Tuple, Optional
 import random
-from utils.image_generation import create_two_channel_image
+
+# Handle both direct execution and module import
+if __name__ == "__main__":
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from utils.image_generation import create_two_channel_image
+else:
+    from utils.image_generation import create_two_channel_image
 
 
 class MalwareImageDataset(Dataset):
@@ -92,22 +99,6 @@ def create_data_loaders(
     max_samples: Optional[int] = None,
     num_workers: int = 0
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
-    """
-    Create train, validation, and test data loaders.
-    
-    Args:
-        data_dir: Root directory with malware/benign subdirectories
-        mode: 'two_channel' (kept for compatibility)
-        batch_size: Batch size for training
-        train_split: Fraction of data for training (0.7 = 70%)
-        val_split: Fraction of data for validation (0.2 = 20%)
-        test_split: Fraction of data for testing (0.1 = 10%)
-        max_samples: Maximum samples to load (None for all)
-        num_workers: Number of worker processes for data loading
-        
-    Returns:
-        train_loader, val_loader, test_loader
-    """
     full_dataset = MalwareImageDataset(data_dir, mode=mode, max_samples=max_samples)
     
     total_size = len(full_dataset)

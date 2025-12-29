@@ -10,7 +10,7 @@ DATA_CONFIG = {
 MODEL_CONFIG = {
     'image_size': 256,
     
-    # 3C2D CNN config
+    # 3C2D config
     'conv_channels': [32, 64, 128],
     'kernel_size': 3,
     'pool_size': 2,
@@ -18,17 +18,17 @@ MODEL_CONFIG = {
     'dropout_rate': 0.5,
     
     # ResNet config
-    'resnet_variant': 'resnet18',  # 'resnet18' or 'resnet50'
+    'resnet_variant': 'resnet50',
     'pretrained': True,
     'freeze_backbone': False,  # If True, only train final layer
 }
 
 TRAINING_CONFIG = {
-    'batch_size': 1024,
-    'num_epochs': 50,
+    'batch_size': 128,
+    'num_epochs': 25,
     'learning_rate': 0.001,
-    'patience': 10,  # Early stopping patience
-    'device': 'auto',  # 'auto', 'cpu', or 'cuda'
+    'patience': 10,
+    'device': 'auto',
 }
 
 IMAGE_CONFIG = {
@@ -61,16 +61,7 @@ LOG_CONFIG = {
 }
 
 
-def get_config(model_type: str = '3c2d'):
-    """
-    Get complete configuration.
-    
-    Args:
-        model_type: '3c2d' (shallow CNN) or 'resnet' (ResNet-18/50)
-        
-    Returns:
-        Dictionary with all configuration parameters
-    """
+def get_config(model_type: str = 'resnet'):
     config = {
         'model_type': model_type,
         'data': DATA_CONFIG.copy(),
@@ -82,12 +73,11 @@ def get_config(model_type: str = '3c2d'):
         'log': LOG_CONFIG.copy(),
     }
     
-    # Set data mode based on model type
     if model_type == '3c2d':
         config['data']['mode'] = 'two_channel'  # 2-way XOR
         config['model']['input_channels'] = 1
     elif model_type == 'resnet':
-        config['data']['mode'] = 'three_way_xor'  # 3-way XOR
+        config['data']['mode'] = 'three_way_xor'
         config['model']['input_channels'] = 3
     else:
         raise ValueError(f"Unknown model_type: {model_type}")
@@ -105,13 +95,7 @@ def print_config(config):
             print(f"{section}: {params}")
     
 
-# Example usage
 if __name__ == "__main__":
-    print("3C2D Model Configuration:")
-    config = get_config(model_type='3c2d')
-    print_config(config)
-    
-    print("\n" + "="*50 + "\n")
     print("ResNet Model Configuration:")
     config = get_config(model_type='resnet')
     print_config(config)
