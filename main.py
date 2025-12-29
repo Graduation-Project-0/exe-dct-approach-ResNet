@@ -58,6 +58,14 @@ def run_pipeline(config):
     device = get_device(config['training']['device'])
     setup_directories(config)
     
+    if torch.cuda.is_available():
+        torch.backends.cudnn.benchmark = True
+        
+        print(f"GPU Device: {torch.cuda.get_device_name(0)}")
+        print(f"Total GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
+        print(f"CUDA Version: {torch.version.cuda}")
+        print()
+    
     print("Loading data...")
     train_loader, val_loader, test_loader = create_data_loaders(
         data_dir=config['data']['data_dir'],
@@ -67,7 +75,9 @@ def run_pipeline(config):
         val_split=config['data']['val_split'],
         test_split=config['data']['test_split'],
         max_samples=config['data']['max_samples'],
-        num_workers=config['data']['num_workers']
+        num_workers=config['data']['num_workers'],
+        prefetch_factor=config['data'].get('prefetch_factor'),
+        persistent_workers=config['data'].get('persistent_workers', False)
     )
     
     print("\nInitializing model...")

@@ -97,7 +97,9 @@ def create_data_loaders(
     val_split: float = 0.2,
     test_split: float = 0.1,
     max_samples: Optional[int] = None,
-    num_workers: int = 0
+    num_workers: int = 0,
+    prefetch_factor: Optional[int] = None,
+    persistent_workers: bool = False
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     full_dataset = MalwareImageDataset(data_dir, mode=mode, max_samples=max_samples)
     
@@ -117,28 +119,35 @@ def create_data_loaders(
         generator=torch.Generator().manual_seed(42)
     )
     
+    loader_kwargs = {
+        'batch_size': batch_size,
+        'num_workers': num_workers,
+        'pin_memory': True,
+    }
+    
+    if num_workers > 0:
+        loader_kwargs['persistent_workers'] = persistent_workers
+        if prefetch_factor is not None:
+            loader_kwargs['prefetch_factor'] = prefetch_factor
+        if torch.cuda.is_available():
+            loader_kwargs['pin_memory_device'] = 'cuda'
+    
     train_loader = DataLoader(
         train_dataset,
-        batch_size=batch_size,
         shuffle=True,
-        num_workers=num_workers,
-        pin_memory=True
+        **loader_kwargs
     )
     
     val_loader = DataLoader(
         val_dataset,
-        batch_size=batch_size,
         shuffle=False,
-        num_workers=num_workers,
-        pin_memory=True
+        **loader_kwargs
     )
     
     test_loader = DataLoader(
         test_dataset,
-        batch_size=batch_size,
         shuffle=False,
-        num_workers=num_workers,
-        pin_memory=True
+        **loader_kwargs
     )
     
     return train_loader, val_loader, test_loader

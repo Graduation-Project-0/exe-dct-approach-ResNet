@@ -64,7 +64,9 @@ def train_epoch(
     train_loader: DataLoader,
     criterion: nn.Module,
     optimizer: optim.Optimizer,
-    device: torch.device
+    device: torch.device,
+    scaler: Optional[torch.cuda.amp.GradScaler] = None,
+    gradient_accumulation_steps: int = 1
 ) -> Tuple[float, float]:
     model.train()
     running_loss = 0.0
@@ -72,26 +74,34 @@ def train_epoch(
     total = 0
     
     pbar = tqdm(train_loader, desc="Training", leave=False)
-    for images, labels in pbar:
-        images = images.to(device)
-        labels = labels.to(device).long()  # CrossEntropyLoss expects Long tensor
+    for batch_idx, (images, labels) in enumerate(pbar):
+        images = images.to(device, non_blocking=True) 
+        labels = labels.to(device, non_blocking=True).long() 
         
-        optimizer.zero_grad()
-        
-        # H100 Optimization: BFloat16 Mixed Precision
-        with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
+        with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=(scaler is not None)):
             outputs = model(images)
             loss = criterion(outputs, labels)
+            loss = loss / gradient_accumulation_steps
         
-        loss.backward()
-        optimizer.step()
+        if scaler is not None:
+            scaler.scale(loss).backward()
+            
+            if (batch_idx + 1) % gradient_accumulation_steps == 0:
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+        else:
+            loss.backward()
+            if (batch_idx + 1) % gradient_accumulation_steps == 0:
+                optimizer.step()
+                optimizer.zero_grad(set_to_none=True)
         
-        running_loss += loss.item() * images.size(0)
+        running_loss += loss.item() * images.size(0) * gradient_accumulation_steps
 
         predictions = torch.argmax(outputs, dim=1)
         correct += (predictions == labels).sum().item()
         
-        pbar.set_postfix({'loss': loss.item()})
+        pbar.set_postfix({'loss': loss.item() * gradient_accumulation_steps})
         
         total += labels.size(0)
     
@@ -113,8 +123,8 @@ def evaluate(
     with torch.no_grad():
         pbar = tqdm(data_loader, desc="Evaluating", leave=False)
         for images, labels in pbar:
-            images = images.to(device)
-            labels = labels.to(device).long()  # CrossEntropyLoss expects Long tensor
+            images = images.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True).long()
             
             outputs = model(images)
             loss = criterion(outputs, labels)

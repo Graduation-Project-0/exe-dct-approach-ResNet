@@ -3,8 +3,10 @@ DATA_CONFIG = {
     'train_split': 0.7,
     'val_split': 0.2,
     'test_split': 0.1,
-    'max_samples': None,  # None for all samples
-    'num_workers': 8,     # Number of data loading workers
+    'max_samples': None,
+    'num_workers': 16,
+    'prefetch_factor': 4,
+    'persistent_workers': True,
 }
 
 MODEL_CONFIG = {
@@ -24,15 +26,17 @@ MODEL_CONFIG = {
 }
 
 TRAINING_CONFIG = {
-    'batch_size': 128,
+    'batch_size': 1024,
     'num_epochs': 25,
     'learning_rate': 0.001,
     'patience': 10,
     'device': 'auto',
+    'gradient_accumulation_steps': 1,
+    'use_amp': True,
 }
 
 IMAGE_CONFIG = {
-    'zero_out_bigram_0000': True,  # As per paper
+    'zero_out_bigram_0000': True,
     'bigram_normalization': True,
     
     'dct_normalization': 'ortho',
